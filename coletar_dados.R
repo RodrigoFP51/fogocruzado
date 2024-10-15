@@ -5,14 +5,15 @@ library(here)
 
 
 # Adquirir token ----------------------------------------------------------
+readRenviron(".Renviron")
 
 auth_url <- "https://api-service.fogocruzado.org.br/api/v2/auth/login"
 
 auth <- POST(
   auth_url,
   body = toJSON(
-    list("email" = "rodrigopizzinato@hotmail.com",
-         "password" = "pizzinato5198fp"),
+    list("email" = Sys.getenv("EMAIL"),
+         "password" = Sys.getenv("PASSWORD")),
     auto_unbox = TRUE
   ),
   encode = "raw",
