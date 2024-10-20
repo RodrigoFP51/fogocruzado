@@ -43,17 +43,22 @@ json_to_tbl <- function(resp){
     discard(\(x) is.data.frame(x) | is.list(x))
 }
 
-base_url <- "https://api-service.fogocruzado.org.br/api/v2"
-endpoint <- "/occurrences"
+base_url <- "https://api-service.fogocruzado.org.br/api/v2/"
+endpoint <- "occurrences"
+
+query_params <- list(
+  idState        = "b112ffbe-17b3-4ad0-8f2a-2038745d1d14",
+  initialdate    = "2017-01-01",
+  finaldate      = "2024-01-01",
+  typeOccurrence = "all",
+  take           = 20
+)
 
 resp <- GET(
-  #url = "https://api-service.fogocruzado.org.br/api/v2/occurrences?order=ASC&page=1&take=20&idState=813ca36b-91e3-4a18-b408-60b27a1942ef", 
   paste0(base_url, endpoint),
   config = add_headers("Authorization" = paste("Bearer", access_token),
                        "Content-Type" = "application/json"),
-  query = list(idState = "b112ffbe-17b3-4ad0-8f2a-2038745d1d14",
-               initialdate="2020-01-01",
-               finaldate="2024-10-01")
+  query = query_params
 )
 
 total_pag <- resp %>% 
@@ -65,17 +70,13 @@ all_data <- map(
   .x = 1:total_pag,
   #.x = 1:total_pag,
   .f = function(x){
-    url <- paste0("https://api-service.fogocruzado.org.br/api/v2/occurrences?order=ASC&page=",
-                  x,
-                  "&take=20")
+    url <- paste0("https://api-service.fogocruzado.org.br/api/v2/occurrences?page=", x)
     
     resp <- GET(
       url    = paste0(base_url, endpoint),
       config = add_headers("Authorization" = paste("Bearer", access_token),
-                           "Content-Type"  = "application/json"),
-      query  = list(idState     = "b112ffbe-17b3-4ad0-8f2a-2038745d1d14",
-                    initialdate = "2020-01-01",
-                    finaldate   = "2024-10-01")
+                           "Content-Type" = "application/json"),
+      query  = query_params
     )
     
     content <- json_to_tbl(resp)
@@ -83,10 +84,9 @@ all_data <- map(
     Sys.sleep(1)
     
     return(content)
-  }
-)
-
-all_data <- all_data %>% 
+  },
+  .progress = TRUE
+) %>% 
   list_rbind()
 
 write_csv(all_data, 
