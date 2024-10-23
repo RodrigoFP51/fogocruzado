@@ -33,13 +33,19 @@ json_to_tbl <- function(resp){
     fromJSON() %>%
     pluck("data") %>%
     as_tibble() %>% 
-    unnest(cols = c(state, region, city,
+    unnest(cols = c(
+      #state,
+      #region,
+      city, 
                     neighborhood, subNeighborhood, locality,
                     victims),
-           names_sep = "_") %>%
-    unnest(cols = c(victims_genre, victims_place, victims_politicalPosition,
-                    victims_politicalStatus, victims_coorporation),
            names_sep = "_") %>% 
+    unnest(cols = c(victims_ageGroup, victims_genre, victims_place,
+                    victims_serviceStatus, victims_politicalPosition, victims_politicalStatus,
+                    victims_coorporation, victims_agentPosition, victims_agentStatus),
+           names_sep = "_") %>% 
+    unnest(contextInfo, names_sep = "_") %>% 
+    unnest(contextInfo_mainReason, names_sep = "_") %>% 
     discard(\(x) is.data.frame(x) | is.list(x))
 }
 
@@ -66,9 +72,7 @@ total_pag <- resp %>%
   pluck("pageMeta") %>% 
   pluck("pageCount")
 
-all_data <- map(
-  .x = 1:total_pag,
-  #.x = 1:total_pag,
+safely_get_data <- safely(
   .f = function(x){
     url <- paste0("https://api-service.fogocruzado.org.br/api/v2/occurrences?page=", x)
     
@@ -79,16 +83,30 @@ all_data <- map(
       query  = query_params
     )
     
+    
+    if(!resp$status_code %in% 200){
+      stop("Status code: ", resp$status_code)
+    }
+    
     content <- json_to_tbl(resp)
     
-    Sys.sleep(1)
+    Sys.sleep(1.2)
     
     return(content)
-  },
+  }
+)
+
+all_data <- map(
+  .x = 1:200,
+  #.x = 1:total_pag,
+  .f = safely_get_data,
   .progress = TRUE
-) %>% 
+)
+
+all_data <- all_data %>% 
+  map("result") %>% 
   list_rbind()
 
-write_csv(all_data, 
-          here("dados/dados_raw.csv"))
+write_csv(x = all_data,
+          file = here("dados/dados_raw.csv"))
 
