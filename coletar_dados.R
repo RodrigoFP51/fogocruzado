@@ -12,7 +12,7 @@ auth_url <- "https://api-service.fogocruzado.org.br/api/v2/auth/login"
 auth <- POST(
   auth_url,
   body = toJSON(
-    list("email" = Sys.getenv("EMAIL"),
+    list("email"    = Sys.getenv("EMAIL"),
          "password" = Sys.getenv("PASSWORD")),
     auto_unbox = TRUE
   ),
@@ -57,13 +57,13 @@ query_params <- list(
   initialdate    = "2017-01-01",
   finaldate      = "2024-01-01",
   typeOccurrence = "all",
-  take           = 20
+  take           = 200
 )
 
 resp <- GET(
   paste0(base_url, endpoint),
   config = add_headers("Authorization" = paste("Bearer", access_token),
-                       "Content-Type" = "application/json"),
+                       "Content-Type"  = "application/json"),
   query = query_params
 )
 
@@ -74,12 +74,15 @@ total_pag <- resp %>%
 
 safely_get_data <- safely(
   .f = function(x){
-    url <- paste0("https://api-service.fogocruzado.org.br/api/v2/occurrences?page=", x)
+    url <- paste0(
+      "https://api-service.fogocruzado.org.br/api/v2/occurrences?page=", 
+      x
+    )
     
     resp <- GET(
       url    = paste0(base_url, endpoint),
       config = add_headers("Authorization" = paste("Bearer", access_token),
-                           "Content-Type" = "application/json"),
+                           "Content-Type"  = "application/json"),
       query  = query_params
     )
     
@@ -97,8 +100,8 @@ safely_get_data <- safely(
 )
 
 all_data <- map(
-  .x = 1:200,
-  #.x = 1:total_pag,
+  #.x = 1:10,
+  .x = 1:total_pag,
   .f = safely_get_data,
   .progress = TRUE
 )
