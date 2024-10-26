@@ -56,8 +56,8 @@ query_params <- list(
   idState        = "b112ffbe-17b3-4ad0-8f2a-2038745d1d14",
   initialdate    = "2017-01-01",
   finaldate      = "2024-01-01",
-  typeOccurrence = "all",
-  take           = 200
+  typeOccurrence = "all"
+  #take           = 200
 )
 
 resp <- GET(
@@ -75,12 +75,15 @@ total_pag <- resp %>%
 safely_get_data <- safely(
   .f = function(x){
     url <- paste0(
-      "https://api-service.fogocruzado.org.br/api/v2/occurrences?page=", 
-      x
+      base_url, endpoint
+      #"https://api-service.fogocruzado.org.br/api/v2/occurrences?page=", 
+      #x
     )
     
+    query_params$page <- x
+    
     resp <- GET(
-      url    = paste0(base_url, endpoint),
+      url    = url,
       config = add_headers("Authorization" = paste("Bearer", access_token),
                            "Content-Type"  = "application/json"),
       query  = query_params
@@ -95,6 +98,7 @@ safely_get_data <- safely(
     
     Sys.sleep(1.2)
     
+    #return(content)
     return(content)
   }
 )
