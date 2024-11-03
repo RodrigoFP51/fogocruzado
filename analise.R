@@ -34,9 +34,10 @@ plot_categories <- function(data,
 # Quais localidades tem mais ocorrências ----------------------------------
 
 ocorrencias %>% 
-  count(city_name, victims_situation, sort = TRUE) %>% 
-  mutate(city_name = fct_reorder(city_name, n)) %>%
-  filter(n > 200) %>% 
+  count(city_name, victims_situation, sort = TRUE) %>%
+  mutate(total = sum(n), .by = city_name) %>%
+  filter(total > 100) %>% 
+  mutate(city_name = fct_reorder(city_name, n)) %>% 
   plot_categories(city_name, fill_col = victims_situation) + 
   scale_fill_manual(values = paleta_situacao) +
   scale_y_continuous(breaks = seq(0, 8000, 1000)) +
@@ -49,7 +50,7 @@ ocorrencias %>%
   mutate(total = sum(n), .by = neighborhood_name) %>%
   filter(total > 100) %>%
   mutate(neighborhood_name = fct_reorder(neighborhood_name, n),
-         label = paste0(round(n / total, 2) * 100, "%")) 
+         label = paste0(round(n / total, 2) * 100, "%")) %>% 
   plot_categories(neighborhood_name, victims_situation) +
   geom_text(aes(label = label),
             position = position_stack(vjust = 0.5),
@@ -88,6 +89,13 @@ ocorrencias_resumido <- ocorrencias %>%
            unique),
     n_mortos = sum(victims_situation == "Morto"),
     n_feridos = sum(victims_situation == "Ferido"),
+    n_agente_morto = sum(victims_personType == "Agente" & victims_situation == "Morto"),
+    n_civis_morto = sum(victims_personType == "Civil" & victims_situation == "Morto"),
+    n_homens_morto = sum(victims_genre_name == "Homem cis" & victims_situation == "Morto"),
+    n_mulheres_morto = sum(victims_genre_name == "Mulher cis" & victims_situation == "Morto"),
+    n_trans_morto = sum(victims_genre_name == "Mulher trans e travesti" & victims_situation == "Morto"),
+    n_homens_ferido = sum(victims_genre_name == "Homem cis" & victims_situation == "Ferido"),
+    n_mulhers_ferido = sum(victims_genre_name == "Mulher cis" & victims_situation == "Ferido"),
     n_vitimas = n()
   )
   
