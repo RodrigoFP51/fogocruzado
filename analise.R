@@ -20,7 +20,8 @@ plot_categories <- function(data,
   
   if (is.null(bar_color)) {
     p +
-      geom_col(aes(fill = {{ fill_col }})) +
+      geom_col(aes(fill = {{ fill_col }}),
+               position = position_dodge()) +
       coord_flip()
   } else {
     p +
@@ -52,10 +53,6 @@ ocorrencias %>%
   mutate(neighborhood_name = fct_reorder(neighborhood_name, n),
          label = paste0(round(n / total, 2) * 100, "%")) %>% 
   plot_categories(neighborhood_name, victims_situation) +
-  geom_text(aes(label = label),
-            position = position_stack(vjust = 0.5),
-            size = 3,
-            color = "white") +
   scale_fill_manual(values = paleta_situacao, name = "") +
   labs(x = "", y = "N° Ocorrências") +
   theme(legend.position = "bottom")
@@ -65,7 +62,14 @@ ocorrencias %>%
 # Quais são os principais motivos das ocorrências ------------------------
 
 ocorrencias %>% 
-  count(contextInfo_mainReason_name, sort = TRUE) %>%
+  mutate(
+    contextInfo_mainReason_name = fct_lump_min(
+      contextInfo_mainReason_name,
+      min = 50,
+      other_level = "Outro"
+    )
+  ) %>% 
+  count(contextInfo_mainReason_name, sort = TRUE) %>% 
   mutate(contextInfo_mainReason_name = fct_reorder(contextInfo_mainReason_name, n)) %>% 
   plot_categories(contextInfo_mainReason_name, bar_color = "firebrick") + 
   labs(x = "", y = "N° Ocorrências") +
@@ -73,30 +77,33 @@ ocorrencias %>%
 
 # Principais locais que as vitimas se encontravam nas ocorrências ---------------------------------------
 
-  ocorrencias %>% 
+ocorrencias %>%
   count(victims_place_name, sort = TRUE) %>%
-  mutate(victims_place_name = fct_reorder(victims_place_name, n)) %>% 
-  plot_categories(victims_place_name, bar_color = "firebrick") + 
+  mutate(victims_place_name = fct_reorder(victims_place_name, n)) %>%
+  plot_categories(victims_place_name, bar_color = "firebrick") +
   labs(x = "", y = "N° Ocorrências") +
   theme(legend.position = "bottom")
-  
+
+# Evolução no tempo -------------------------------------------------------
 
 ocorrencias_resumido <- ocorrencias %>% 
   group_by(id) %>% 
   summarize(
-    date = unique(date),
-    across(c(city_name, neighborhood_name, latitude, longitude),
-           unique),
-    n_mortos = sum(victims_situation == "Morto"),
-    n_feridos = sum(victims_situation == "Ferido"),
-    n_agente_morto = sum(victims_personType == "Agente" & victims_situation == "Morto"),
-    n_civis_morto = sum(victims_personType == "Civil" & victims_situation == "Morto"),
-    n_homens_morto = sum(victims_genre_name == "Homem cis" & victims_situation == "Morto"),
+    across(
+      c(date, city_name, neighborhood_name,
+        latitude, longitude),
+      unique
+    ),
+    n_mortos         = sum(victims_situation == "Morto"),
+    n_feridos        = sum(victims_situation == "Ferido"),
+    n_agente_morto   = sum(victims_personType == "Agente" & victims_situation == "Morto"),
+    n_civis_morto    = sum(victims_personType == "Civil" & victims_situation == "Morto"),
+    n_homens_morto   = sum(victims_genre_name == "Homem cis" & victims_situation == "Morto"),
     n_mulheres_morto = sum(victims_genre_name == "Mulher cis" & victims_situation == "Morto"),
-    n_trans_morto = sum(victims_genre_name == "Mulher trans e travesti" & victims_situation == "Morto"),
-    n_homens_ferido = sum(victims_genre_name == "Homem cis" & victims_situation == "Ferido"),
+    n_trans_morto    = sum(victims_genre_name == "Mulher trans e travesti" & victims_situation == "Morto"),
+    n_homens_ferido  = sum(victims_genre_name == "Homem cis" & victims_situation == "Ferido"),
     n_mulhers_ferido = sum(victims_genre_name == "Mulher cis" & victims_situation == "Ferido"),
-    n_vitimas = n()
+    n_vitimas        = n()
   )
   
 ocorrencias_resumido %>% 
@@ -111,15 +118,18 @@ ocorrencias_resumido %>%
   geom_line(lwd = 1) +
   scale_color_viridis_d(begin = 0.3, 
                         name = "Situação da Vítima")
-  
+
+
+# Detalhes por bairro -----------------------------------------------------
+
 ocorrencias_resumido %>% 
   summarize(
-    across(n_mortos:n_vitimas, sum),
+    across(c(n_mortos, n_feridos, n_vitimas), sum),
     .by = neighborhood_name
   ) %>% 
   mutate(prop_mortos = n_mortos / n_vitimas) %>%
   filter(n_vitimas > 100) %>% 
-  arrange(desc(prop_mortos)) %>% 
+  arrange(desc(n_vitimas)) %>% 
   gt() %>% 
   cols_label(
     neighborhood_name = "Bairro",
@@ -133,6 +143,55 @@ ocorrencias_resumido %>%
     drop_trailing_zeros = TRUE,
     drop_trailing_dec_mark = TRUE,
     dec_mark = ","
-  )
+  ) %>% 
+  data_color(
+    columns = prop_mortos,
+    method = "numeric",
+    palette = "rcartocolor::RedOr"
+  ) %>% 
+  gtExtras::gt_theme_espn()
+
+
+ocorrencias_resumido %>% 
+  group_by(
+    hora = factor(hour(date)),
+    minuto = factor(floor(minute(date) / 15) * 15)
+  ) %>% 
+  summarize(
+    n_vitimas = sum(n_vitimas)
+  ) %>% 
+  ggplot(aes(minuto, hora)) +
+  geom_tile(aes(fill = n_vitimas)) +
+  scale_fill_viridis_c(begin = 0.25)
+
+
+# Sazonalidade mes x ano --------------------------------------------------
+
+ocorrencias_resumido %>% 
+  group_by(
+    mes = month(date, abbr = TRUE, label = TRUE),
+    ano = year(date)
+  ) %>% 
+  filter(ano != 2024) %>% 
+  summarize(
+    n_vitimas = sum(n_vitimas)
+  ) %>% 
+  ggplot(aes(mes, ano)) +
+  geom_tile(aes(fill = n_vitimas),
+            color = "white") +
+  geom_text(aes(label = n_vitimas),
+            color = "white",
+            size = 3) +
+  scale_y_continuous(breaks = 2017:2024) +
+  scale_fill_gradient(name = "N° de Vítimas",
+                      low = "#fca379",
+                      high = "#913101") +
+  labs(x='', y='',
+       title = "Sazonalidade ano x mês")
+
+
+
+
+
 
 

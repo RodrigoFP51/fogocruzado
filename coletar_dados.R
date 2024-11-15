@@ -22,10 +22,6 @@ auth <- POST(
 
 access_token <- content(auth, as = "parsed")$data$accessToken
 
-# auth2 <- POST("https://api-service.fogocruzado.org.br/api/v2/auth/refresh",
-#               body = toJSON(list(Authorization = paste0("Bearer ", access_token)), 
-#                             auto_unbox = TRUE))
-
 # Acesso aos dados --------------------------------------------------------
 
 json_to_tbl <- function(resp){
@@ -37,9 +33,8 @@ json_to_tbl <- function(resp){
       #state,
       #region,
       city, 
-                    neighborhood, subNeighborhood, locality,
-                    victims),
-           names_sep = "_") %>% 
+      neighborhood, subNeighborhood, locality, victims),
+      names_sep = "_") %>% 
     unnest(cols = c(victims_ageGroup, victims_genre, victims_place,
                     victims_serviceStatus, victims_politicalPosition, victims_politicalStatus,
                     victims_coorporation, victims_agentPosition, victims_agentStatus),
