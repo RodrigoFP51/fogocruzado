@@ -8,7 +8,9 @@ ocorrencias <-
 
 paleta_situacao <- c("#fdb750", "#fc2e20")
 theme_set(
-  theme_minimal()
+  theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5),
+          plot.subtitle = element_text(hjust = 0.5))
 )
 
 plot_categories <- function(data, 
@@ -39,9 +41,16 @@ ocorrencias %>%
   mutate(total = sum(n), .by = city_name) %>%
   filter(total > 100) %>% 
   mutate(city_name = fct_reorder(city_name, n)) %>% 
-  plot_categories(city_name, fill_col = victims_situation) + 
+  ggplot(aes(n, city_name)) +
+  geom_line(lwd = 1.5, color = "brown") +
+  geom_point(aes(fill = victims_situation),
+             size = 5,
+             color = "white",
+             alpha = 0.8,
+             shape =  21) +
+  #plot_categories(city_name, fill_col = victims_situation) + 
   scale_fill_manual(values = paleta_situacao) +
-  scale_y_continuous(breaks = seq(0, 8000, 1000)) +
+  scale_x_continuous(breaks = seq(0, 8000, 1000)) +
   labs(x = "", y = "N° Ocorrências") +
   theme(legend.position = "bottom")
 
@@ -52,7 +61,14 @@ ocorrencias %>%
   filter(total > 100) %>%
   mutate(neighborhood_name = fct_reorder(neighborhood_name, n),
          label = paste0(round(n / total, 2) * 100, "%")) %>% 
-  plot_categories(neighborhood_name, victims_situation) +
+  ggplot(aes(n, neighborhood_name)) +
+  geom_line(lwd = 1.2, color = "brown") +
+  geom_point(aes(fill = victims_situation),
+             size = 5,
+             color = "white",
+             alpha = 0.8,
+             shape =  21) +
+  #plot_categories(neighborhood_name, victims_situation) +
   scale_fill_manual(values = paleta_situacao, name = "") +
   labs(x = "", y = "N° Ocorrências") +
   theme(legend.position = "bottom")
@@ -79,10 +95,12 @@ ocorrencias %>%
 
 ocorrencias %>%
   count(victims_place_name, sort = TRUE) %>%
+  filter(victims_place_name != "Sem identificação") %>% 
   mutate(victims_place_name = fct_reorder(victims_place_name, n)) %>%
   plot_categories(victims_place_name, bar_color = "firebrick") +
-  labs(x = "", y = "N° Ocorrências") +
-  theme(legend.position = "bottom")
+  labs(x = "", y = "N° Ocorrências",
+       title = "Local em que as vítimas estavam no momento da ocorrência",
+       subtitle = "Excluindo registros sem identificação") 
 
 # Evolução no tempo -------------------------------------------------------
 
@@ -94,16 +112,16 @@ ocorrencias_resumido <- ocorrencias %>%
         latitude, longitude),
       unique
     ),
-    n_mortos         = sum(victims_situation == "Morto"),
-    n_feridos        = sum(victims_situation == "Ferido"),
-    n_agente_morto   = sum(victims_personType == "Agente" & victims_situation == "Morto"),
-    n_civis_morto    = sum(victims_personType == "Civil" & victims_situation == "Morto"),
-    n_homens_morto   = sum(victims_genre_name == "Homem cis" & victims_situation == "Morto"),
-    n_mulheres_morto = sum(victims_genre_name == "Mulher cis" & victims_situation == "Morto"),
-    n_trans_morto    = sum(victims_genre_name == "Mulher trans e travesti" & victims_situation == "Morto"),
-    n_homens_ferido  = sum(victims_genre_name == "Homem cis" & victims_situation == "Ferido"),
-    n_mulhers_ferido = sum(victims_genre_name == "Mulher cis" & victims_situation == "Ferido"),
-    n_vitimas        = n()
+    n_mortos           = sum(victims_situation == "Morto"),
+    n_feridos          = sum(victims_situation == "Ferido"),
+    n_agentes_mortos   = sum(victims_personType == "Agente" & victims_situation == "Morto"),
+    n_civis_mortos     = sum(victims_personType == "Civil" & victims_situation == "Morto"),
+    n_homens_mortos    = sum(victims_genre_name == "Homem cis" & victims_situation == "Morto"),
+    n_mulheres_mortos  = sum(victims_genre_name == "Mulher cis" & victims_situation == "Morto"),
+    n_trans_mortos     = sum(victims_genre_name == "Mulher trans e travesti" & victims_situation == "Morto"),
+    n_homens_feridos   = sum(victims_genre_name == "Homem cis" & victims_situation == "Ferido"),
+    n_mulheres_feridos = sum(victims_genre_name == "Mulher cis" & victims_situation == "Ferido"),
+    n_vitimas          = n()
   )
   
 ocorrencias_resumido %>% 
