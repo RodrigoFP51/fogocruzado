@@ -49,7 +49,8 @@ ocorrencias %>%
              alpha = 0.8,
              shape =  21) +
   #plot_categories(city_name, fill_col = victims_situation) + 
-  scale_fill_manual(values = paleta_situacao) +
+  scale_fill_manual(values = paleta_situacao,
+                    name = "Situação da vítima") +
   scale_x_continuous(breaks = seq(0, 8000, 1000)) +
   labs(x = "", y = "N° Ocorrências") +
   theme(legend.position = "bottom")
@@ -123,6 +124,8 @@ ocorrencias_resumido <- ocorrencias %>%
     n_mulheres_feridos = sum(victims_genre_name == "Mulher cis" & victims_situation == "Ferido"),
     n_vitimas          = n()
   )
+
+write_csv(ocorrencias_resumido, here("dados", "dados_resumido.csv"))
   
 ocorrencias_resumido %>% 
   mutate(date = floor_date(as_date(date), "month")) %>% 
